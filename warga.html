@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal Warga - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="halaman-fitur">
+<header class="fitur-header">
+  <a class="merek" href="/">BersihPoin</a>
+  <nav class="fitur-nav" aria-label="Navigasi warga">
+    <a class="aktif" href="{{ url_for('portal_warga') }}">Pantau TPS</a>
+    <a href="{{ url_for('halaman_aduan_warga') }}">Aduan dan masukan</a>
+    <a href="{{ url_for('halaman_edukasi') }}">Edukasi</a>
+    <a href="/">Pilih portal</a>
+  </nav>
+</header>
+<main class="fitur-main">
+  <section class="fitur-intro">
+    <div><p class="label-atas">PORTAL WARGA · CILEGON</p><h1>Pantau sampah di sekitar Anda</h1>
+      <p>Pilih TPS dari peta atau daftar untuk melihat catatan harian, grafik, dan prediksi.</p></div>
+    <label class="pilih-tps">Pilih TPS
+      <select id="pilihTps"><option value="">Semua TPS</option></select>
+    </label>
+  </section>
+  <section class="fitur-kartu">
+    <h2>Peta lokasi TPS</h2>
+    <p class="bantuan">Tekan penanda pada peta atau pilih nama TPS. Peta menampilkan TPS yang sudah didaftarkan operator.</p>
+    <p id="statusPeta" class="pesan-status" role="status"></p>
+    <div id="petaWarga" class="peta" role="application" aria-label="Peta lokasi TPS Cilegon"></div>
+  </section>
+  <section class="fitur-grid">
+    <article class="fitur-kartu">
+      <div class="judul-baris"><div><h2>Rekap dan prediksi</h2><p id="ringkasWarga" class="bantuan">Memuat data…</p></div>
+        <label class="pilih-hari">Prediksi
+          <select id="jumlahHari"><option value="3">3 hari</option><option value="7" selected>7 hari</option><option value="14">14 hari</option><option value="30">30 hari</option></select>
+        </label>
+      </div>
+      <div id="grafikWarga" class="grafik-warga" aria-live="polite"></div>
+    </article>
+    <article class="fitur-kartu">
+      <h2>TPS yang dipilih</h2>
+      <div id="detailTps" class="detail-tps"><p class="bantuan">Pilih TPS pada peta atau daftar.</p></div>
+    </article>
+  </section>
+  <section class="fitur-kartu">
+    <h2>Catatan sampah per hari</h2>
+    <div class="tabel-gulir"><table><thead><tr><th>Tanggal</th><th>TPS</th><th>Sampah masuk</th><th>Curah hujan</th></tr></thead><tbody id="barisData"></tbody></table></div>
+  </section>
+  <section class="fitur-kartu">
+    <h2>Ada masukan untuk TPS?</h2>
+    <p class="bantuan">Kirim aduan atau masukan melalui halaman khusus. Pesan akan masuk ke operator TPS tujuan.</p>
+    <a class="tombol tautan-tombol" href="{{ url_for('halaman_aduan_warga') }}">Buka formulir aduan</a>
+  </section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const h = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const tanggal = s => s ? new Date(s + "T00:00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"}) : "—";
+const state = { tps: [], nama: "" };
+
+function gambarGrafik(data, hasil, hari) {
+  const historis = data.slice(-10);
+  const prediksi = hasil && hasil.cukup ? hasil.hari : [];
+  const gabung = [...historis.map(x => ({tanggal:x.tanggal,kg:+x.berat,jenis:"riwayat"})), ...prediksi.map(x => ({tanggal:x.tanggal,kg:x.kg,jenis:"prediksi"}))];
+  if (!gabung.length) {
+    $("#grafikWarga").innerHTML = '<p class="bantuan">Belum ada data untuk ditampilkan.</p>';
+    return;
+  }
+  const W=800,H=250,L=54,R=20,T=18,B=52, max=Math.max(1,...gabung.map(x=>x.kg)), step=(W-L-R)/gabung.length;
+  const bars=gabung.map((x,i)=>{const bh=(H-T-B)*x.kg/max;const xx=L+i*step+step*.18;return `<rect x="${xx}" y="${H-B-bh}" width="${step*.64}" height="${bh}" rx="3" class="${x.jenis}"><title>${h(tanggal(x.tanggal))}: ${x.kg} kg</title></rect><text x="${xx+step*.32}" y="${H-22}" text-anchor="middle" class="label">${h(new Date(x.tanggal+"T00:00").toLocaleDateString("id-ID",{day:"numeric",month:"short"}))}</text>`}).join("");
+  const guides=[0,.5,1].map(f=>{const y=T+(H-T-B)*(1-f);return `<line x1="${L}" y1="${y}" x2="${W-R}" y2="${y}" class="grid"/><text x="${L-8}" y="${y+4}" text-anchor="end" class="label">${Math.round(max*f)}</text>`}).join("");
+  $("#grafikWarga").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafik catatan dan prediksi sampah untuk ${hari} hari">${guides}${bars}</svg><div class="legenda"><span><i class="swatch riwayat"></i>Catatan harian</span><span><i class="swatch prediksi"></i>Prediksi ${hari} hari</span></div>`;
+}
+
+async function muatData() {
+  const lokasi=state.nama;
+  const [dataRes, predRes]=await Promise.all([
+    fetch("/api/public/data?lokasi="+encodeURIComponent(lokasi)),
+    fetch("/api/public/prediksi?lokasi="+encodeURIComponent(lokasi)+"&hari="+$("#jumlahHari").value)
+  ]);
+  if(!dataRes.ok||!predRes.ok) throw new Error("Data TPS gagal dimuat.");
+  const rows=await dataRes.json(), pred=await predRes.json();
+  const perHari=new Map(), perTpsHari=new Map();
+  for(const r of rows){
+    const berat=Number(r.berat)||0, hariKey=r.tanggal, key=r.tanggal+"|"+r.lokasi;
+    const hari=perHari.get(hariKey)||{tanggal:hariKey,berat:0};
+    hari.berat+=berat;perHari.set(hariKey,hari);
+    const rekap=perTpsHari.get(key)||{tanggal:hariKey,lokasi:r.lokasi,berat:0,hujan:0,jumlahHujan:0};
+    rekap.berat+=berat;
+    if(r.hujan!=null){rekap.hujan+=Number(r.hujan)||0;rekap.jumlahHujan++;}
+    perTpsHari.set(key,rekap);
+  }
+  const dataHarian=[...perHari.values()].sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+  const rekapTps=[...perTpsHari.values()].sort((a,b)=>b.tanggal.localeCompare(a.tanggal)||a.lokasi.localeCompare(b.lokasi));
+  const label=lokasi||"Semua TPS";
+  $("#ringkasWarga").textContent=pred.cukup
+    ? `${label}: ${dataHarian.length} hari dengan catatan · prediksi ${pred.total} kg untuk ${$("#jumlahHari").value} hari ke depan.`
+    : `${label}: ${dataHarian.length} hari dengan catatan. Minimal 3 hari data diperlukan untuk prediksi.`;
+  gambarGrafik(dataHarian,pred,$("#jumlahHari").value);
+  $("#barisData").innerHTML=rekapTps.length?rekapTps.slice(0,40).map(r=>`<tr><td>${h(tanggal(r.tanggal))}</td><td>${h(r.lokasi)}</td><td>${r.berat.toLocaleString("id-ID",{maximumFractionDigits:1})} kg</td><td>${r.jumlahHujan?(r.hujan/r.jumlahHujan).toLocaleString("id-ID",{maximumFractionDigits:1})+" mm":"—"}</td></tr>`).join(""):'<tr><td colspan="4">Belum ada catatan sampah.</td></tr>';
+  const tps=state.tps.find(x=>x.nama===lokasi);
+  $("#detailTps").innerHTML=tps?`<strong>${h(tps.nama)}</strong><p>${h(tps.alamat||"Alamat belum diisi")}</p><p>Kapasitas: ${tps.kapasitas} kg</p><p>Catatan hari ini: ${tps.berat_hari_ini} kg (${Math.round(tps.isi*100)}%)</p><div class="meter"><i style="width:${Math.min(100,tps.isi*100)}%;background:${tps.isi>=.8?"var(--koral)":"var(--daun)"}"></i></div>`:'<p class="bantuan">Pilih satu TPS untuk melihat alamat dan kapasitasnya.</p>';
+}
+
+async function mulai() {
+  const response=await fetch("/api/public/tps");
+  if(!response.ok) throw new Error("Daftar TPS gagal dimuat.");
+  state.tps=await response.json();
+  const pilih=$("#pilihTps");
+  for(const t of state.tps){
+    pilih.add(new Option(t.nama,t.nama));
+  }
+  $("#pilihTps").addEventListener("change",e=>pilihTps(e.target.value));
+  $("#jumlahHari").addEventListener("change",()=>muatData().catch(tampilkanError));
+  await muatData();
+  if(!window.L){$("#petaWarga").textContent="Peta tidak dapat dimuat. Periksa koneksi internet.";return;}
+  const map=L.map("petaWarga").setView([-5.99,106.04],12);
+  const tiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+  tiles.on("tileerror",()=>$("#statusPeta").textContent="Peta dasar tidak dapat dimuat. Periksa koneksi internet atau pilih TPS melalui daftar.");
+  const bounds=[];
+  for(const t of state.tps){
+    if(typeof t.lat!=="number"||typeof t.lng!=="number") continue;
+    const marker=L.marker([t.lat,t.lng]).addTo(map).bindPopup(`<strong>${h(t.nama)}</strong><br>${h(t.alamat||"Alamat belum diisi")}<br><button type="button" class="pilih-marker" data-tps="${h(t.nama)}">Lihat rekap</button>`);
+    marker.on("popupopen",()=>{const b=document.querySelector(".pilih-marker");if(b)b.onclick=()=>pilihTps(t.nama);});
+    bounds.push([t.lat,t.lng]);
+  }
+  if(bounds.length) map.fitBounds(bounds,{padding:[25,25],maxZoom:14});
+}
+function pilihTps(nama){state.nama=nama;$("#pilihTps").value=nama;muatData().catch(tampilkanError);}
+function tampilkanError(e){$("#ringkasWarga").textContent=e.message||"Terjadi kesalahan saat memuat data.";}
+mulai().catch(tampilkanError);
+</script>
+</body>
+</html>

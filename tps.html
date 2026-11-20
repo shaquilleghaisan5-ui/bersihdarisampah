@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelola TPS - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body class="halaman-fitur">
+<header class="fitur-header"><a class="merek" href="{{ url_for('portal_operator') }}">BersihPoin · TPS</a>
+  <nav class="fitur-nav" aria-label="Navigasi operator"><a href="{{ url_for('portal_operator') }}">Input data</a><a class="aktif" href="{{ url_for('halaman_tps') }}">Kelola TPS</a><a href="{{ url_for('halaman_aduan') }}">Aduan warga</a><a href="{{ url_for('halaman_armada') }}">Armada</a></nav>
+  <form action="{{ url_for('logout') }}" method="post"><button class="keluar" type="submit">Keluar</button></form>
+</header>
+<main class="fitur-main">
+  <section class="fitur-intro"><div><p class="label-atas">PETA TPS · CILEGON DAN SEKITARNYA</p><h1>Daftarkan lokasi TPS</h1><p>Cari nama daerah atau alamat untuk menemukan titik pada peta. Titik dapat disesuaikan dengan mengeklik peta.</p></div></section>
+  <section class="fitur-grid">
+    <form id="formTps" class="fitur-kartu form-grid">
+      <h2 class="lebar-penuh">Informasi TPS</h2>
+      <label>Nama TPS <input id="namaTps" maxlength="96" required placeholder="Contoh: Jombang Wetan"></label>
+      <label>Alamat atau daerah <input id="alamatTps" maxlength="200" required placeholder="Kelurahan, kecamatan, Cilegon"></label>
+      <div class="lebar-penuh baris-cari"><button id="cariLokasi" class="tombol kedua" type="button">Cari titik lokasi</button><span id="hasilCari" class="bantuan" role="status"></span></div>
+      <div id="hasilLokasi" class="hasil-lokasi lebar-penuh"></div>
+      <label>Kapasitas TPS (kg) <input id="kapasitasTps" type="number" min="10" max="5000" value="150" required></label>
+      <label>Koordinat <span class="koordinat"><input id="lat" type="number" step="any" placeholder="Latitude" required><input id="lng" type="number" step="any" placeholder="Longitude" required></span></label>
+      <button class="tombol" type="submit">Simpan lokasi TPS</button>
+      <p id="pesanTps" class="pesan-status lebar-penuh" role="status"></p>
+    </form>
+    <section class="fitur-kartu"><h2>Peta TPS</h2><p class="bantuan">Peta dibatasi untuk Cilegon dan sekitarnya. Klik peta untuk memilih titik.</p><p id="statusPeta" class="pesan-status" role="status"></p><div id="petaKelola" class="peta peta-kelola"></div></section>
+  </section>
+  <section class="fitur-kartu"><h2>TPS terdaftar</h2><div id="daftarTps" class="daftar-tps"></div></section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=s=>document.querySelector(s), bounds={south:-6.25,north:-5.7,west:105.75,east:106.45};
+let map,marker,all=[],savedMarkers=[];
+const h=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(url,options){const r=await fetch(url,options);const d=await r.json();if(!r.ok)throw new Error(d.error||"Permintaan gagal.");return d;}
+function setPoint(lat,lng){if(lat<bounds.south||lat>bounds.north||lng<bounds.west||lng>bounds.east){$("#pesanTps").textContent="Pilih titik di Cilegon dan sekitarnya.";return;}$("#lat").value=lat.toFixed(6);$("#lng").value=lng.toFixed(6);if(marker)marker.setLatLng([lat,lng]);else marker=L.marker([lat,lng]).addTo(map);map.setView([lat,lng],14);}
+function gambarPeta(){savedMarkers.forEach(m=>map.removeLayer(m));savedMarkers=all.filter(t=>typeof t.lat==="number"&&typeof t.lng==="number").map(t=>L.marker([t.lat,t.lng]).addTo(map).bindPopup(h(t.nama)));}
+function gambarDaftar(){ $("#daftarTps").innerHTML=all.length?all.map(t=>`<article class="baris-tps"><div><strong>${h(t.nama)}</strong><span>${h(t.alamat||"Alamat belum diisi")} · ${t.kapasitas} kg</span></div><button type="button" class="tombol kedua" data-nama="${h(t.nama)}">Ubah</button></article>`).join(""):'<p class="bantuan">Belum ada TPS terdaftar.</p>';document.querySelectorAll(".baris-tps button").forEach(b=>b.onclick=()=>{const t=all.find(x=>x.nama===b.dataset.nama);if(!t)return;$("#namaTps").value=t.nama.replace(/^TPS\s/i,"");$("#alamatTps").value=t.alamat;$("#kapasitasTps").value=t.kapasitas;setPoint(t.lat,t.lng);window.scrollTo({top:0,behavior:"smooth"});});}
+async function mulai(){
+  all=await api("/api/operator/tps");gambarDaftar();
+  if(!window.L){$("#petaKelola").textContent="Peta tidak dapat dimuat. Periksa koneksi internet.";return;}
+  map=L.map("petaKelola",{maxBounds:[[bounds.south,bounds.west],[bounds.north,bounds.east]],maxBoundsViscosity:1}).setView([-5.99,106.04],12);
+  const tiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
+  tiles.on("tileerror",()=>$("#statusPeta").textContent="Peta dasar tidak dapat dimuat. Periksa koneksi internet; koordinat tetap dapat diisi manual.");
+  map.on("click",e=>setPoint(e.latlng.lat,e.latlng.lng));
+  gambarPeta();
+}
+$("#cariLokasi").onclick=async()=>{
+  const q=($("#alamatTps").value||$("#namaTps").value).trim();if(!q){$("#hasilCari").textContent="Masukkan nama daerah atau alamat terlebih dahulu.";return;}
+  $("#hasilCari").textContent="Mencari lokasi di sekitar Cilegon…";
+  try{
+    const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&bounded=1&viewbox=105.75,-5.7,106.45,-6.25&q="+encodeURIComponent(q+", Cilegon, Indonesia");
+    const r=await fetch(url,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error("Layanan pencarian lokasi tidak tersedia.");
+    const results=(await r.json()).filter(x=>+x.lat>=bounds.south&&+x.lat<=bounds.north&&+x.lon>=bounds.west&&+x.lon<=bounds.east);
+    $("#hasilLokasi").innerHTML=results.length?results.map((x,i)=>`<button class="hasil-lokasi-item" type="button" data-i="${i}">${h(x.display_name)}</button>`).join(""):'<p class="bantuan">Lokasi tidak ditemukan di area Cilegon. Coba nama kelurahan atau alamat yang lebih rinci.</p>';
+    document.querySelectorAll(".hasil-lokasi-item").forEach(b=>b.onclick=()=>{const x=results[+b.dataset.i];setPoint(+x.lat,+x.lon);$("#alamatTps").value=x.display_name;$("#hasilLokasi").replaceChildren();$("#hasilCari").textContent="Titik lokasi dipilih.";});
+    $("#hasilCari").textContent=results.length?"Pilih salah satu hasil pencarian.":"Pencarian selesai.";
+  }catch(e){$("#hasilCari").textContent=e.message;}
+};
+$("#formTps").addEventListener("submit",async e=>{
+  e.preventDefault();const msg=$("#pesanTps");msg.textContent="Menyimpan lokasi…";
+  try{
+    const t=await api("/api/operator/tps",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nama:$("#namaTps").value,alamat:$("#alamatTps").value,kapasitas:$("#kapasitasTps").value,lat:$("#lat").value,lng:$("#lng").value})});
+    msg.textContent=t.nama+" berhasil disimpan.";all=await api("/api/operator/tps");if(marker){map.removeLayer(marker);marker=null;}gambarDaftar();gambarPeta();
+  }catch(err){msg.textContent=err.message;}
+});
+mulai().catch(e=>$("#pesanTps").textContent=e.message);
+</script>
+</body>
+</html>

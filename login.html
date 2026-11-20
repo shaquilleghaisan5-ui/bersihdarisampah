@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ "Buat akun" if setup else "Login" }} - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="halaman-login">
+<main class="login">
+  <a class="merek" href="{{ url_for('beranda') }}">BersihPoin</a>
+  <form class="kartu" method="post">
+    <h1>{{ "Buat akun pertama" if setup else "Selamat datang kembali" }}</h1>
+    <p>{{ "Buat satu akun bersama yang akan digunakan seluruh operator TPS." if setup else "Masuk ke portal operator TPS untuk mengelola catatan, aduan warga, dan armada." }}</p>
+    {% if pesan %}<p class="pesan" role="alert">{{ pesan }}</p>{% endif %}
+    <label>Nama pengguna <input name="username" autocomplete="username" minlength="3" maxlength="40" required></label>
+    <label class="kata-sandi">Kata sandi
+      <span class="wadah-sandi">
+        <input id="password" name="password" type="password" autocomplete="{{ 'new-password' if setup else 'current-password' }}" minlength="{{ 8 if setup else 1 }}" required>
+        <button class="lihat-sandi" type="button" aria-label="Tampilkan kata sandi" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path class="garis-tutup" d="m3 3 18 18" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+      </span>
+    </label>
+    {% if setup %}<small>Kata sandi minimal 8 karakter.</small>{% endif %}
+    <button class="tombol" type="submit">{{ "Buat akun dan masuk" if setup else "Masuk" }}</button>
+    <a class="tautan-portal" href="{{ url_for('beranda') }}">← Kembali ke pilihan portal</a>
+  </form>
+</main>
+<script>
+const sandi = document.querySelector("#password");
+const tombolSandi = document.querySelector(".lihat-sandi");
+tombolSandi.addEventListener("click", () => {
+  const tampil = sandi.type === "password";
+  sandi.type = tampil ? "text" : "password";
+  tombolSandi.setAttribute("aria-pressed", String(tampil));
+  tombolSandi.setAttribute("aria-label", tampil ? "Sembunyikan kata sandi" : "Tampilkan kata sandi");
+  tombolSandi.classList.toggle("aktif", tampil);
+});
+</script>
+</body>
+</html>

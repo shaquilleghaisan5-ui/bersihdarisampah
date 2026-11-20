@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Armada - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="halaman-fitur">
+<header class="fitur-header"><a class="merek" href="{{ url_for('portal_operator') }}">BersihPoin · TPS</a>
+  <nav class="fitur-nav" aria-label="Navigasi operator"><a href="{{ url_for('portal_operator') }}">Input data</a><a href="{{ url_for('halaman_tps') }}">Kelola TPS</a><a href="{{ url_for('halaman_aduan') }}">Aduan warga</a><a class="aktif" href="{{ url_for('halaman_armada') }}">Armada</a></nav>
+  <form action="{{ url_for('logout') }}" method="post"><button class="keluar" type="submit">Keluar</button></form>
+</header>
+<main class="fitur-main">
+  <section class="fitur-intro"><div><p class="label-atas">JADWAL PENGANGKUTAN</p><h1>Status armada</h1><p>Armada menjadi “Perlu diangkut” otomatis saat catatan hari ini mencapai 80% kapasitas TPS.</p></div></section>
+  <form id="formArmada" class="fitur-kartu form-grid">
+    <h2 class="lebar-penuh">Tambah armada</h2>
+    <label>Nama atau nomor armada <input id="namaArmada" maxlength="80" required placeholder="Contoh: Truk 01"></label>
+    <label>TPS tujuan <select id="tpsArmada" required><option value="">Pilih TPS</option></select></label>
+    <button class="tombol" type="submit">Tambah armada</button>
+    <p id="pesanArmada" class="pesan-status lebar-penuh" role="status"></p>
+  </form>
+  <section class="fitur-kartu"><h2>Daftar armada dan status TPS</h2><div id="daftarArmada" class="daftar-armada"></div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s),h=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+async function api(url,options){const r=await fetch(url,options);const d=await r.json();if(!r.ok)throw new Error(d.error||"Permintaan gagal.");return d;}
+async function muat(){
+  const [tps,armada]=await Promise.all([api("/api/operator/tps"),api("/api/operator/armada")]);
+  $("#tpsArmada").replaceChildren(new Option("Pilih TPS",""),...tps.map(t=>new Option(t.nama,t.nama)));
+  $("#daftarArmada").innerHTML=armada.length?armada.map(a=>`<article class="kartu-armada"><div><strong>${h(a.nama)}</strong><span>${h(a.tps)}</span><span class="badge-status ${a.status_efektif}">${a.status_efektif==="mengangkut"?"Sedang mengangkut":a.status_efektif==="butuh_angkut"?"Perlu diangkut":"Siaga"}</span></div><label>Ubah status<select data-id="${h(a.id)}" class="status-armada"><option value="siaga" ${a.status==="siaga"?"selected":""}>Siaga</option><option value="mengangkut" ${a.status==="mengangkut"?"selected":""}>Sedang mengangkut</option></select></label></article>`).join(""):'<p class="bantuan">Belum ada armada. Tambahkan armada untuk mulai memantau status.</p>';
+  document.querySelectorAll(".status-armada").forEach(s=>s.onchange=async()=>{try{await api("/api/operator/armada/"+encodeURIComponent(s.dataset.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:s.value})});await muat();}catch(e){$("#pesanArmada").textContent=e.message;}});
+}
+$("#formArmada").addEventListener("submit",async e=>{e.preventDefault();const p=$("#pesanArmada");try{await api("/api/operator/armada",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nama:$("#namaArmada").value,tps:$("#tpsArmada").value})});$("#namaArmada").value="";p.textContent="Armada berhasil ditambahkan.";await muat();}catch(err){p.textContent=err.message;}});
+muat().catch(e=>$("#pesanArmada").textContent=e.message);
+</script>
+</body>
+</html>

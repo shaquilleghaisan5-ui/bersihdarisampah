@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal TPS - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="halaman-fitur">
+<header class="fitur-header">
+  <a class="merek" href="{{ url_for('portal_operator') }}">BersihPoin · TPS</a>
+  <nav class="fitur-nav" aria-label="Navigasi operator">
+    <a class="aktif" href="{{ url_for('portal_operator') }}">Input data</a>
+    <a href="{{ url_for('halaman_tps') }}">Kelola TPS</a>
+    <a href="{{ url_for('halaman_aduan') }}">Aduan warga</a>
+    <a href="{{ url_for('halaman_armada') }}">Armada</a>
+    <a href="{{ url_for('dashboard_lama') }}">Dashboard prediksi</a>
+    <a href="{{ url_for('portal_warga') }}">Portal warga</a>
+  </nav>
+  <form action="{{ url_for('logout') }}" method="post"><button class="keluar" type="submit">Keluar</button></form>
+</header>
+<main class="fitur-main">
+  <section class="fitur-intro"><div><p class="label-atas">AKUN TPS BERSAMA</p><h1>Catat sampah masuk</h1>
+    <p>Pilih TPS, masukkan data harian, dan lihat peringatan kapasitas berdasarkan data hari ini.</p></div></section>
+  <section class="fitur-grid">
+    <form class="fitur-kartu form-grid" id="formData">
+      <h2 class="lebar-penuh">Input data TPS</h2>
+      <label>TPS <select id="tps" required><option value="">Pilih TPS</option></select></label>
+      <label>Tanggal <input id="tanggal" type="date" required></label>
+      <label>Berat sampah (kg) <input id="berat" type="number" min="0.1" max="100000" step="0.1" required></label>
+      <label>Curah hujan (mm) <input id="hujan" type="number" min="0" max="500" step="0.1" value="0" required></label>
+      <button class="tombol" type="submit">Simpan catatan</button>
+      <p id="pesanData" class="pesan-status lebar-penuh" role="status"></p>
+    </form>
+    <aside class="fitur-kartu">
+      <h2>Status kapasitas hari ini</h2>
+      <div id="statusTps" class="detail-tps"><p class="bantuan">Pilih TPS untuk melihat status kapasitas.</p></div>
+      <p class="bantuan">Peringatan muncul saat catatan hari ini mencapai 80% kapasitas.</p>
+    </aside>
+  </section>
+  <section class="fitur-kartu">
+    <div class="judul-baris"><div><h2>Catatan terbaru</h2><p class="bantuan">Riwayat untuk TPS yang dipilih.</p></div><a class="tautan-portal" href="{{ url_for('halaman_tps') }}">Tambah atau atur lokasi TPS →</a></div>
+    <div class="tabel-gulir"><table><thead><tr><th>Tanggal</th><th>Berat</th><th>Curah hujan</th></tr></thead><tbody id="catatanTerbaru"></tbody></table></div>
+  </section>
+</main>
+<script>
+const $=s=>document.querySelector(s), idHari=new Date().toLocaleDateString("sv-SE");
+let daftar=[];
+const h=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>Number(n).toLocaleString("id-ID");
+async function api(url,options){const r=await fetch(url,options);const d=await r.json();if(!r.ok)throw new Error(d.error||"Permintaan gagal.");return d;}
+function pilihTps(){return daftar.find(t=>t.nama===$("#tps").value);}
+function gambarStatus(t){
+  if(!t){$("#statusTps").innerHTML='<p class="bantuan">Pilih TPS yang telah didaftarkan.</p>';return;}
+  const p=t.kapasitas?t.berat_hari_ini/t.kapasitas:0, kelas=p>=1?"kritis":p>=.8?"peringatan":"";
+  $("#statusTps").innerHTML=`<strong>${h(t.nama)}</strong><p>${fmt(t.berat_hari_ini)} kg dari kapasitas ${fmt(t.kapasitas)} kg (${Math.round(p*100)}%).</p><div class="meter"><i style="width:${Math.min(100,p*100)}%;background:${p>=.8?"var(--koral)":"var(--daun)"}"></i></div>${kelas?`<p class="pesan-status ${kelas}" role="alert">${p>=1?"Kapasitas tercapai. Segera jadwalkan armada.":"TPS hampir penuh. Siapkan armada."}</p>`:"<p class=\"pesan-status\">Kapasitas masih tersedia.</p>"}`;
+}
+async function muatCatatan(){
+  const t=pilihTps();gambarStatus(t);
+  if(!t){$("#catatanTerbaru").innerHTML='<tr><td colspan="3">Daftarkan atau pilih TPS terlebih dahulu.</td></tr>';return;}
+  const rows=await api("/api/data?lokasi="+encodeURIComponent(t.nama));
+  $("#catatanTerbaru").innerHTML=rows.length?rows.slice(0,12).map(r=>`<tr><td>${h(r.tanggal)}</td><td>${fmt(r.berat)} kg</td><td>${r.hujan==null?"—":fmt(r.hujan)+" mm"}</td></tr>`).join(""):'<tr><td colspan="3">Belum ada catatan.</td></tr>';
+}
+async function mulai(){
+  daftar=await api("/api/operator/tps");
+  $("#tps").replaceChildren(new Option("Pilih TPS",""),...daftar.map(t=>new Option(t.nama,t.nama)));
+  $("#tanggal").value=idHari;$("#tps").addEventListener("change",()=>muatCatatan().catch(e=>$("#pesanData").textContent=e.message));
+  await muatCatatan();
+}
+$("#formData").addEventListener("submit",async e=>{
+  e.preventDefault();const p=$("#pesanData");p.textContent="Menyimpan…";
+  try{
+    const r=await api("/api/operator/data",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tps:$("#tps").value,tanggal:$("#tanggal").value,berat:$("#berat").value,hujan:$("#hujan").value})});
+    p.textContent=r.status==="maksimum"?"Batas kapasitas tercapai. Armada perlu segera dikirim.":r.status==="hampir"?"TPS hampir penuh. Armada perlu dijadwalkan.":"Catatan berhasil disimpan.";
+    $("#berat").value="";daftar=await api("/api/operator/tps");await muatCatatan();
+  }catch(err){p.textContent=err.message;}
+});
+mulai().catch(e=>$("#pesanData").textContent=e.message);
+</script>
+</body>
+</html>

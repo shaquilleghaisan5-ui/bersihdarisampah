@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aduan Warga - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="halaman-fitur">
+<header class="fitur-header">
+  <a class="merek" href="/">BersihPoin</a>
+  <nav class="fitur-nav" aria-label="Navigasi warga">
+    <a href="{{ url_for('portal_warga') }}">Pantau TPS</a>
+    <a class="aktif" href="{{ url_for('halaman_aduan_warga') }}">Aduan dan masukan</a>
+    <a href="{{ url_for('halaman_edukasi') }}">Edukasi</a>
+    <a href="/">Pilih portal</a>
+  </nav>
+</header>
+<main class="fitur-main">
+  <section class="fitur-intro"><div><p class="label-atas">SUARA WARGA · CILEGON</p><h1>Sampaikan aduan atau masukan</h1>
+    <p>Pilih TPS tujuan dan jelaskan masukan Anda. Operator TPS bersama akan menerima aduan ini langsung di portalnya.</p></div></section>
+  <section class="fitur-kartu">
+    <form id="formAduan" class="form-grid">
+      <label>TPS tujuan <select id="aduanTps" required><option value="">Memuat daftar TPS…</option></select></label>
+      <label>Nama (opsional) <input id="namaWarga" maxlength="80" autocomplete="name" placeholder="Nama Anda"></label>
+      <label class="lebar-penuh">Aduan atau masukan <textarea id="isiAduan" rows="6" maxlength="2000" required placeholder="Jelaskan masukan atau masalah yang ingin disampaikan"></textarea><small>Maksimal 2.000 karakter.</small></label>
+      <button class="tombol" type="submit">Kirim aduan</button>
+      <p id="hasilAduan" role="status" class="pesan-status"></p>
+    </form>
+  </section>
+  <a class="tautan-portal" href="{{ url_for('portal_warga') }}">← Kembali ke pantau TPS</a>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+async function daftarTps(){
+  const r=await fetch("/api/public/tps"),rows=await r.json();
+  if(!r.ok)throw new Error("Daftar TPS gagal dimuat.");
+  const select=$("#aduanTps");
+  select.replaceChildren(new Option(rows.length?"Pilih TPS":"Belum ada TPS terdaftar",""));
+  rows.forEach(t=>select.add(new Option(t.nama,t.nama)));
+  if(!rows.length)$("#hasilAduan").textContent="Belum ada TPS terdaftar untuk menerima aduan.";
+}
+$("#formAduan").addEventListener("submit",async e=>{
+  e.preventDefault();const hasil=$("#hasilAduan");hasil.textContent="Mengirim aduan…";
+  try{
+    const r=await fetch("/api/public/aduan",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tps:$("#aduanTps").value,nama:$("#namaWarga").value,isi:$("#isiAduan").value})});
+    const data=await r.json();if(!r.ok)throw new Error(data.error||"Aduan gagal dikirim.");
+    hasil.textContent="Aduan terkirim pada "+new Date(data.aduan.waktu).toLocaleString("id-ID")+". Operator TPS dapat langsung melihatnya.";
+    $("#isiAduan").value="";
+  }catch(err){hasil.textContent=err.message;}
+});
+daftarTps().catch(e=>$("#hasilAduan").textContent=e.message);
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edukasi Sampah - BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="halaman-fitur">
+<header class="fitur-header">
+  <a class="merek" href="/">BersihPoin</a>
+  <nav class="fitur-nav" aria-label="Navigasi warga">
+    <a href="{{ url_for('portal_warga') }}">Pantau TPS</a>
+    <a class="aktif" href="{{ url_for('halaman_edukasi') }}">Edukasi</a>
+    <a href="/">Pilih portal</a>
+  </nav>
+</header>
+<main class="fitur-main">
+  <section class="fitur-intro"><div><p class="label-atas">BELAJAR BERSAMA</p><h1>Sampah lebih tertata, lingkungan lebih sehat</h1>
+    <p>Kebiasaan kecil di rumah dan lingkungan membantu mengurangi sampah yang berakhir di TPS.</p></div></section>
+  <section class="edukasi-grid">
+    <article class="fitur-kartu"><span class="nomor-edukasi">01</span><h2>Pilah dari rumah</h2><p>Pisahkan sampah organik, anorganik yang dapat didaur ulang, dan residu. Gunakan wadah berbeda agar sampah mudah ditangani.</p></article>
+    <article class="fitur-kartu"><span class="nomor-edukasi">02</span><h2>Kurangi sampah sekali pakai</h2><p>Bawa tas belanja, botol minum, dan wadah guna ulang. Pilih produk dengan kemasan seperlunya dan gunakan kembali barang yang masih layak.</p></article>
+    <article class="fitur-kartu"><span class="nomor-edukasi">03</span><h2>Olah sampah organik</h2><p>Sisa sayur dan buah dapat diolah menjadi kompos dengan cara yang sesuai untuk rumah atau lingkungan. Jangan mencampurkan bahan yang tidak dapat terurai.</p></article>
+    <article class="fitur-kartu"><span class="nomor-edukasi">04</span><h2>Jaga kebersihan TPS</h2><p>Buang sampah pada tempat dan waktu yang ditentukan. Bungkus rapat sampah yang berbau, jangan membakar sampah, dan laporkan kondisi TPS yang perlu ditangani.</p></article>
+    <article class="fitur-kartu"><span class="nomor-edukasi">05</span><h2>Kenali sampah berbahaya</h2><p>Baterai, lampu, obat, dan limbah elektronik tidak sebaiknya dicampur dengan sampah rumah tangga biasa. Simpan terpisah dan ikuti arahan pengumpulan setempat.</p></article>
+    <article class="fitur-kartu"><span class="nomor-edukasi">06</span><h2>Terlibat di lingkungan</h2><p>Ajak keluarga dan tetangga menjaga kebersihan bersama. Gunakan portal warga untuk memantau catatan TPS dan menyampaikan masukan kepada operator.</p></article>
+  </section>
+  <a class="tombol tautan-tombol" href="{{ url_for('portal_warga') }}">Kembali ke peta dan data TPS</a>
+</main>
+</body>
+</html>

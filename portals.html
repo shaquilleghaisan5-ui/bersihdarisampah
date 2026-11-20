@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal BersihPoin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="halaman-portal">
+<main class="portal-pilih">
+  <a class="merek" href="/">BersihPoin</a>
+  <h1>Pilih portal Anda</h1>
+  <p>Informasi persampahan Cilegon yang terbuka, mudah dipantau, dan saling terhubung.</p>
+  <div class="pilihan-portal">
+    <a class="kartu-portal" href="{{ url_for('portal_warga') }}">
+      <span class="ikon-portal" aria-hidden="true">♻</span>
+      <h2>Portal Warga</h2>
+      <p>Lihat lokasi TPS, rekap dan prediksi sampah, materi edukasi, serta sampaikan masukan tanpa perlu login.</p>
+      <span class="tautan-portal">Lihat informasi warga →</span>
+    </a>
+    <a class="kartu-portal" href="{{ url_for('login') }}">
+      <span class="ikon-portal" aria-hidden="true">▣</span>
+      <h2>Portal TPS</h2>
+      <p>Masuk dengan akun bersama operator untuk mencatat sampah, mengelola TPS, aduan warga, dan armada.</p>
+      <span class="tautan-portal">Masuk sebagai operator →</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>

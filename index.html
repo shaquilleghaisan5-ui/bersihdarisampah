@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BersihPoin: prakiraan sampah 7 hari</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="atas">
+  <a class="merek" href="/dashboard"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M5 8h14l-1.4 12H6.4z" fill="#5FA86B"/><rect x="3.5" y="5" width="17" height="3" rx="1.5" fill="#1E3A2B"/></svg>BersihPoin</a>
+  <nav class="lokasi" id="lokasi" aria-label="Pilih lokasi">
+    <button class="aktif" data-v="">Semua TPS</button>
+    {% for l in lokasi %}<button data-v="{{ l }}">{{ l }}</button>{% endfor %}
+  </nav>
+  <form action="{{ url_for('logout') }}" method="post"><button class="keluar" type="submit">Keluar</button></form>
+</header>
+
+<main class="tata">
+  <section class="panggung" aria-labelledby="judul">
+    <h1 id="judul">Sampah seminggu ke depan</h1>
+    <p class="ringkas" id="ringkas">Memuat prakiraan…</p>
+    <div id="peringatan" aria-live="assertive"></div>
+    <div id="notifikasiAktual" aria-live="assertive"></div>
+
+    <div class="kendali">
+      <label>Batas maksimal tong/armada <output id="kapV">150</output> kg
+        <input type="range" id="kap" min="30" max="500" step="10" value="150"></label>
+      <label>Angkut paling lama tiap <output id="maksV">3</output> hari
+        <input type="range" id="maks" min="1" max="7" step="1" value="3"></label>
+      <label>Bobot fitur curah hujan <output id="bobotHujanV">50</output>%
+        <input type="range" id="bobotHujan" min="0" max="100" step="5" value="50"></label>
+      <label>Bobot fitur tren sampah <output id="bobotTrenV">100</output>%
+        <input type="range" id="bobotTren" min="0" max="100" step="5" value="100"></label>
+    </div>
+
+    <div class="gulir"><div class="lajur">
+      <div class="tongs" id="tongs"></div>
+      <div class="jalan"><svg class="truk" id="truk" viewBox="0 0 64 36" aria-hidden="true"><rect x="2" y="5" width="38" height="21" rx="3" fill="#F0B429"/><path d="M40 11h11l9 9v6H40z" fill="#F0B429"/><rect x="45" y="14" width="8" height="6" rx="1" fill="#1E3A2B"/><circle cx="14" cy="28" r="5" fill="#14261C"/><circle cx="50" cy="28" r="5" fill="#14261C"/><circle cx="14" cy="28" r="1.8" fill="#F1ECD7"/><circle cx="50" cy="28" r="1.8" fill="#F1ECD7"/></svg></div>
+    </div></div>
+
+    <div class="detail" id="detail" aria-live="polite"></div>
+    <section class="grafik-kartu" aria-labelledby="judul-grafik">
+      <h2 id="judul-grafik">Grafik prediksi sampah dan curah hujan</h2>
+      <div id="grafik"><p class="grafik-kosong">Memuat grafik…</p></div>
+    </section>
+  </section>
+
+  <aside class="samping">
+    <form class="kartu" id="form">
+      <h2>Catat sampah hari ini</h2>
+      <label>Tanggal <input type="date" id="tgl" required></label>
+      <label>Berat (kg) <input type="number" id="berat" min="0.1" step="0.1" inputmode="decimal" placeholder="mis. 42,5" required></label>
+      <label>Curah hujan (mm) <input type="number" id="hujan" min="0" max="500" step="0.1" inputmode="decimal" value="0" required></label>
+      <label>Nama TPS <input type="text" id="lok" list="daftarLokasi" maxlength="96" placeholder="Ketik nama; awalan TPS otomatis" required></label>
+      <datalist id="daftarLokasi">{% for l in lokasi %}<option value="{{ l }}">{% endfor %}</datalist>
+      <button class="tombol" type="submit">Simpan data</button>
+    </form>
+    <div class="riwayat">
+      <h2>Catatan terakhir</h2>
+      <ul id="riwayat"></ul>
+    </div>
+  </aside>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script>{{ dashboard_script|safe }}</script>
+</body>
+</html>
